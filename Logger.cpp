@@ -13,6 +13,9 @@
 #include <iostream>
 #include <ctime>
 
+#include <unistd.h>
+#include <boost/filesystem.hpp>
+
 bool logLevelToStr(std::string& str, LogLevel logLevel){
     switch (logLevel)
     {
@@ -35,19 +38,37 @@ bool logLevelToStr(std::string& str, LogLevel logLevel){
 }
 
 Logger::Logger(LogLevel newLogLevel)
-    :logLevel_(newLogLevel)
+    :m_logLevel(newLogLevel)
 {
-    // open log-file
-    logFile_.open("log\\log0.log", std::ios::out | std::ios::app);
 
-    if(!logFile_.is_open()){
+    // check if log directory exists and create it if not
+    char cwd[256];
+    getcwd(cwd, 256);
+
+    #ifdef __linux__
+        std::string logFileDir = std::string(cwd) + "/log";
+        std::string logFileName = logFileDir + "/log0.log";
+    #elif _WIN32
+        std::string logFileDir = std::string(cwd) + "\\log";
+        std::string logFileName = logFileDir + "\\log0.log";
+    #endif
+
+    if (!boost::filesystem::exists(logFileDir)) {
+        boost::filesystem::create_directory(logFileDir);
+    }
+
+    // (create and) open log-file
+    m_logFile.open(logFileName, std::ios::out | std::ios::app);
+
+    // check if logfile creation and opening as been successful
+    if(!m_logFile.is_open()){
         std::string errMsg = "-----------\nERROR: Could not open log-File!\n-----------";
         printToConsole(errMsg, true);
     }
 
     // check if passed log-level is valid (and get loglevel as string), else return
     std::string levelStr = "";
-    if(!logLevelToStr(levelStr, logLevel_)){
+    if(!logLevelToStr(levelStr, m_logLevel)){
         std::string errMsg = "Undefined LogLevel. Logger is terminating.";
         makeEntry(errMsg, LogLevel::Error);
         return;
@@ -61,26 +82,26 @@ Logger::~Logger(){
     std::string infoMsg = "Logger has been shut down";
     makeEntry(infoMsg, LogLevel::Info);
 
-    logFile_ << "------------------------------------------\n\n";
-    logFile_.close();
+    m_logFile << "------------------------------------------\n\n";
+    m_logFile.close();
 }
 
 void Logger::log(const std::string &logEntry, LogLevel logLevel){
-    if(logLevel <= logLevel_) {
+    if(logLevel <= m_logLevel) {
         std::string msg(logEntry); // to not modify original message
         makeEntry(msg, logLevel);
     }
 }
 
 void Logger::log(const char* logEntry, LogLevel logLevel){
-    if(logLevel <= logLevel_) {
+    if(logLevel <= m_logLevel) {
         std::string msg(logEntry);
         makeEntry(msg, logLevel);
     }
 }
 
 void Logger::setLogLevel(LogLevel newLogLevel){
-    logLevel_ = newLogLevel;
+    m_logLevel = newLogLevel;
 }
 
 void Logger::makeEntry(std::string& msg, LogLevel logLevel){
@@ -115,12 +136,11 @@ void Logger::addLogLevel(std::string& msg, LogLevel logLevel){
 
 void Logger::printToConsole(std::string& msg, bool error){
 
-    if (error){
+    if(error){
         std::cerr << msg << std::endl;
     } else {
         std::cout << msg << std::endl;
     }
-
 }
 
 void Logger::printToFile(std::string& msg){
@@ -137,6 +157,6 @@ void Logger::printToFile(std::string& msg){
     std::string timeStr(buffer);
 
     // print to file
-    logFile_ << timeStr << " - " << msg << std::endl;
+    m_logFile << timeStr << " - " << msg << std::endl;
 
 }

@@ -36,8 +36,8 @@ public:
     void setLogLevel(LogLevel newLogLevel);
 
 private:
-    LogLevel logLevel_;
-    std::ofstream logFile_;
+    LogLevel m_logLevel;
+    std::ofstream m_logFile;
 
     // calls printToConsole and printToFile
     void makeEntry(std::string& msg, LogLevel logLevel);
@@ -46,6 +46,7 @@ private:
     void addLogLevel(std::string& msg, LogLevel logLevel);
 
     // handle printing to console with time stamps etc.
+    // prints errors only
     void printToConsole(std::string& msg, bool error = false);
 
     // prints entry to logfile
