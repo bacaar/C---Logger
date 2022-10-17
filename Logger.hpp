@@ -24,12 +24,12 @@ enum LogLevel {
 // logger class
 class Logger{
 public:
-    Logger(LogLevel newLogLevel);
+    Logger(LogLevel newLogLevel, std::string logFileName = "", bool enableConsolePrinting=false, bool useCustomTime=false);
     ~Logger();
 
     // create log entries
-    void log(const std::string &logEntry, LogLevel logLevel);
-    void log(const char* logEntry, LogLevel logLevel);
+    void log(const std::string &logEntry, LogLevel logLevel, std::string timeStr = "");
+    void log(const char* logEntry, LogLevel logLevel, std::string timeStr = "");      // wrapper for above method
 
     // allows to change loglevel after logger-construction. 
     // e.g. to increase loglevel temporarely
@@ -39,14 +39,19 @@ private:
     LogLevel m_logLevel;
     std::ofstream m_logFile;
 
+    bool m_enableConsolePrinting;
+    bool m_useCustomTime;
+
     // calls printToConsole and printToFile
-    void makeEntry(std::string& msg, LogLevel logLevel);
+    void makeEntry(const std::string& msg, LogLevel logLevel, std::string timeStr = "");
 
     // adds log Level as string in front of message
     void addLogLevel(std::string& msg, LogLevel logLevel);
 
+    // adds time as string in front of message
+    void addTime(std::string& msg, std::string& timeStr);
+
     // handle printing to console with time stamps etc.
-    // prints errors only
     void printToConsole(std::string& msg, bool error = false);
 
     // prints entry to logfile

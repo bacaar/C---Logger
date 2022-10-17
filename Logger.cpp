@@ -37,9 +37,19 @@ bool logLevelToStr(std::string& str, LogLevel logLevel){
     return false;
 }
 
-Logger::Logger(LogLevel newLogLevel)
-    :m_logLevel(newLogLevel)
+Logger::Logger(LogLevel newLogLevel, std::string logFileName, bool enableConsolePrinting, bool useCustomTime)
+    :m_logLevel(newLogLevel), m_enableConsolePrinting(enableConsolePrinting), m_useCustomTime(useCustomTime)
 {
+
+    // if no specific logFileName provided, use default
+    if(logFileName == ""){
+        logFileName = "log0.log";
+    }
+
+    // if logfile has no file extension, add it
+    if(logFileName.substr(logFileName.size()-4, 4) != ".log"){
+        logFileName += ".log";
+    }
 
     // check if log directory exists and create it if not
     char cwd[256];
@@ -47,10 +57,10 @@ Logger::Logger(LogLevel newLogLevel)
 
     #ifdef __linux__
         std::string logFileDir = std::string(cwd) + "/log";
-        std::string logFileName = logFileDir + "/log0.log";
+        std::string logFilePath = logFileDir + std::string("/") + logFileName;
     #elif _WIN32
         std::string logFileDir = std::string(cwd) + "\\log";
-        std::string logFileName = logFileDir + "\\log0.log";
+        std::string logFilePath = logFileDir + "\\log0.log";
     #endif
 
     if (!boost::filesystem::exists(logFileDir)) {
@@ -58,7 +68,7 @@ Logger::Logger(LogLevel newLogLevel)
     }
 
     // (create and) open log-file
-    m_logFile.open(logFileName, std::ios::out | std::ios::app);
+    m_logFile.open(logFilePath, std::ios::out | std::ios::app);
 
     // check if logfile creation and opening as been successful
     if(!m_logFile.is_open()){
@@ -86,31 +96,35 @@ Logger::~Logger(){
     m_logFile.close();
 }
 
-void Logger::log(const std::string &logEntry, LogLevel logLevel){
+void Logger::log(const std::string &logEntry, LogLevel logLevel, std::string timeStr){
     if(logLevel <= m_logLevel) {
         std::string msg(logEntry); // to not modify original message
-        makeEntry(msg, logLevel);
+        makeEntry(msg, logLevel, timeStr);
     }
 }
 
-void Logger::log(const char* logEntry, LogLevel logLevel){
-    if(logLevel <= m_logLevel) {
-        std::string msg(logEntry);
-        makeEntry(msg, logLevel);
-    }
+void Logger::log(const char* logEntry, LogLevel logLevel, std::string timeStr){
+    std::string msg(logEntry);  // convert char* to std::string
+    log(msg, logLevel, timeStr);
 }
 
 void Logger::setLogLevel(LogLevel newLogLevel){
     m_logLevel = newLogLevel;
 }
 
-void Logger::makeEntry(std::string& msg, LogLevel logLevel){
+void Logger::makeEntry(const std::string& msg_, LogLevel logLevel, std::string timeStr){
+
+    std::string msg(msg_);      // to make mutable but not change source content
 
     // add logLevel as string at front
     addLogLevel(msg, logLevel);
 
     // make entries at different locations
-    printToConsole(msg, (logLevel == LogLevel::Error ? true : false));
+    if(m_enableConsolePrinting){
+        printToConsole(msg, (logLevel == LogLevel::Error ? true : false));
+    }
+
+    addTime(msg, timeStr);
     printToFile(msg);
 }
 
@@ -133,6 +147,24 @@ void Logger::addLogLevel(std::string& msg, LogLevel logLevel){
     msg = levelStr + msg;
 }
 
+void Logger::addTime(std::string& msg, std::string& timeStr){
+    
+    if(!m_useCustomTime || timeStr == ""){
+        // get current date and time as string
+        time_t rawtime;
+        struct tm * timeinfo;
+        char buffer[80];
+
+        time (&rawtime);
+        timeinfo = localtime(&rawtime);
+
+        strftime(buffer,sizeof(buffer),"%d-%m-%Y %H:%M:%S",timeinfo);
+        timeStr = std::string(buffer);
+    }
+
+    msg = timeStr + std::string(" - ") + msg;
+}
+
 
 void Logger::printToConsole(std::string& msg, bool error){
 
@@ -145,18 +177,7 @@ void Logger::printToConsole(std::string& msg, bool error){
 
 void Logger::printToFile(std::string& msg){
 
-    // get current date and time as string
-    time_t rawtime;
-    struct tm * timeinfo;
-    char buffer[80];
-
-    time (&rawtime);
-    timeinfo = localtime(&rawtime);
-
-    strftime(buffer,sizeof(buffer),"%d-%m-%Y %H:%M:%S",timeinfo);
-    std::string timeStr(buffer);
-
     // print to file
-    m_logFile << timeStr << " - " << msg << std::endl;
+    m_logFile << msg << std::endl;
 
 }
