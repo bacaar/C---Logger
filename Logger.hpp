@@ -3,15 +3,18 @@
  * @date:	2022-04-11
  *
  * @brief:	Logger class to handle all logging
- *
- * @note:	- time stamp still has to be included
- *
  */
 
 #pragma once
 
 #include <string>
 #include <fstream>
+
+#define ENABLE_MULTITHREADING 1
+#ifdef ENABLE_MULTITHREADING
+    #include <thread>
+    #include <mutex>
+#endif
 
 // selection from https://www.ibm.com/docs/en/cognos-analytics/10.2.2?topic=SSEP7J_10.2.2/com.ibm.swg.ba.cognos.ug_rtm_wb.10.2.2.doc/c_n30e74.html
 enum LogLevel {
@@ -41,6 +44,12 @@ private:
 
     bool m_enableConsolePrinting;
     bool m_useCustomTime;
+
+#ifdef ENABLE_MULTITHREADING
+    // multithreading
+    static std::mutex s_consoleMutex;   // as there is only one console for whole programm, mutex for console writing has to be static, so same for all logger instances
+    std::mutex m_fileMutex;             // as each logger writes to separate file, mutex for file writing is independent of other instances
+#endif
 
     // calls printToConsole and printToFile
     void makeEntry(const std::string& msg, LogLevel logLevel, std::string timeStr = "");

@@ -97,9 +97,14 @@ Logger::~Logger(){
 }
 
 void Logger::log(const std::string &logEntry, LogLevel logLevel, std::string timeStr){
+    
     if(logLevel <= m_logLevel) {
-        std::string msg(logEntry); // to not modify original message
-        makeEntry(msg, logLevel, timeStr);
+        #if ENABLE_MULTITHREADING
+            std::thread t(&Logger::makeEntry, this, logEntry, logLevel, timeStr);
+            t.detach(); // leave it running in the background
+        #else
+            makeEntry(logEntry, logLevel, timeStr);
+        #endif
     }
 }
 
@@ -165,19 +170,37 @@ void Logger::addTime(std::string& msg, std::string& timeStr){
     msg = timeStr + std::string(" - ") + msg;
 }
 
+// declare static mutex once
+std::mutex Logger::s_consoleMutex;
 
 void Logger::printToConsole(std::string& msg, bool error){
+
+    #if ENABLE_MULTITHREADING
+        s_consoleMutex.lock();
+    #endif
 
     if(error){
         std::cerr << msg << std::endl;
     } else {
         std::cout << msg << std::endl;
     }
+
+    #if ENABLE_MULTITHREADING
+        s_consoleMutex.unlock();
+    #endif
 }
 
 void Logger::printToFile(std::string& msg){
 
+    #if ENABLE_MULTITHREADING
+        m_fileMutex.lock();
+    #endif
+
     // print to file
     m_logFile << msg << std::endl;
+
+    #if ENABLE_MULTITHREADING
+        m_fileMutex.unlock();
+    #endif
 
 }
