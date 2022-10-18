@@ -9,6 +9,7 @@
 
 #include <string>
 #include <fstream>
+#include <vector>
 
 #define ENABLE_MULTITHREADING 1
 #ifdef ENABLE_MULTITHREADING
@@ -40,7 +41,10 @@ public:
 
 private:
     LogLevel m_logLevel;
+    std::string m_logFilePath;
     std::ofstream m_logFile;
+
+    static std::vector<std::string> s_openLogFiles; // holds paths to all currently open log files in order to make sure that not two loggers are writing to same one
 
     bool m_enableConsolePrinting;
     bool m_useCustomTime;

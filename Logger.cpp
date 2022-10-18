@@ -16,6 +16,10 @@
 #include <unistd.h>
 #include <boost/filesystem.hpp>
 
+// declare static member variables once
+std::mutex Logger::s_consoleMutex;
+std::vector<std::string> Logger::s_openLogFiles;
+
 bool logLevelToStr(std::string& str, LogLevel logLevel){
     switch (logLevel)
     {
@@ -57,22 +61,31 @@ Logger::Logger(LogLevel newLogLevel, std::string logFileName, bool enableConsole
 
     #ifdef __linux__
         std::string logFileDir = std::string(cwd) + "/log";
-        std::string logFilePath = logFileDir + std::string("/") + logFileName;
+        m_logFilePath = logFileDir + std::string("/") + logFileName;
     #elif _WIN32
         std::string logFileDir = std::string(cwd) + "\\log";
-        std::string logFilePath = logFileDir + "\\log0.log";
+        m_logFilePath = logFileDir + "\\log0.log";
     #endif
+
+    // check that no other logger is already writing to that file
+    if (std::find(s_openLogFiles.begin(), s_openLogFiles.end(), m_logFilePath) != s_openLogFiles.end()){
+        std::string errMsg = "-----------\nERROR: log-file already in use by other Logger!\n-----------";
+        printToConsole(errMsg, true);
+    }
+    else{
+        s_openLogFiles.push_back(m_logFilePath);
+    }
 
     if (!boost::filesystem::exists(logFileDir)) {
         boost::filesystem::create_directory(logFileDir);
     }
 
     // (create and) open log-file
-    m_logFile.open(logFilePath, std::ios::out | std::ios::app);
+    m_logFile.open(m_logFilePath, std::ios::out | std::ios::app);
 
     // check if logfile creation and opening as been successful
     if(!m_logFile.is_open()){
-        std::string errMsg = "-----------\nERROR: Could not open log-File!\n-----------";
+        std::string errMsg = "-----------\nERROR: Could not open log-file!\n-----------";
         printToConsole(errMsg, true);
     }
 
@@ -94,6 +107,9 @@ Logger::~Logger(){
 
     m_logFile << "------------------------------------------\n\n";
     m_logFile.close();
+
+    // remove logfile from s_openLogFiles
+    s_openLogFiles.erase(std::find(s_openLogFiles.begin(), s_openLogFiles.end(), m_logFilePath));
 }
 
 void Logger::log(const std::string &logEntry, LogLevel logLevel, std::string timeStr){
@@ -169,9 +185,6 @@ void Logger::addTime(std::string& msg, std::string& timeStr){
 
     msg = timeStr + std::string(" - ") + msg;
 }
-
-// declare static mutex once
-std::mutex Logger::s_consoleMutex;
 
 void Logger::printToConsole(std::string& msg, bool error){
 
