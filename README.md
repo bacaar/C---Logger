@@ -1,2 +1,2 @@
 # C++ - Logger
-Simple logger class for C++ - Projects
+Simple logger class with multithreading for C++ - Projects
