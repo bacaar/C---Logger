@@ -12,7 +12,7 @@
 #include <vector>
 
 #define ENABLE_MULTITHREADING 1
-#ifdef ENABLE_MULTITHREADING
+#if ENABLE_MULTITHREADING
     #include <thread>
     #include <mutex>
 #endif
@@ -49,7 +49,7 @@ private:
     bool m_enableConsolePrinting;
     bool m_useCustomTime;
 
-#ifdef ENABLE_MULTITHREADING
+#if ENABLE_MULTITHREADING
     // multithreading
     static std::mutex s_consoleMutex;   // as there is only one console for whole programm, mutex for console writing has to be static, so same for all logger instances
     std::mutex m_fileMutex;             // as each logger writes to separate file, mutex for file writing is independent of other instances

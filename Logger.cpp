@@ -17,7 +17,9 @@
 #include <boost/filesystem.hpp>
 
 // declare static member variables once
-std::mutex Logger::s_consoleMutex;
+#if ENABLE_MULTITHREADING
+    std::mutex Logger::s_consoleMutex;
+#endif
 std::vector<std::string> Logger::s_openLogFiles;
 
 bool logLevelToStr(std::string& str, LogLevel logLevel){
