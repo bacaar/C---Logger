@@ -48,7 +48,7 @@ void testLoggerClass(){
     customLogger.log("Custom logger", LogLevel::Info, std::to_string(3.14));
 
     {
-        Timer timer;
+        Timer timer;    // measure time until program is ready to continue with something else (-> displayed time is not time needed for logging)
         for(int i = 0; i < 1000; ++i){
             logger.log("Message " + std::to_string(i), LogLevel::Debug);
             customLogger.log("Custom logger message " + std::to_string(i), LogLevel::Debug);
