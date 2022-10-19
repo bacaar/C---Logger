@@ -10,6 +10,7 @@
 #include <string>
 #include <fstream>
 #include <vector>
+#include <queue>
 
 #define ENABLE_MULTITHREADING 1
 #if ENABLE_MULTITHREADING
@@ -25,6 +26,13 @@ enum LogLevel {
     Debug
 };
 
+struct LogEntry{
+    LogLevel logLevel;
+    std::string msg;
+    std::string customTimeStr = "";
+    time_t rawTime = 0;
+};
+
 // logger class
 class Logger{
 public:
@@ -32,6 +40,7 @@ public:
     ~Logger();
 
     // create log entries
+    // write entries to m_logEntries
     void log(const std::string &logEntry, LogLevel logLevel, std::string timeStr = "");
     void log(const char* logEntry, LogLevel logLevel, std::string timeStr = "");      // wrapper for above method
 
@@ -49,20 +58,28 @@ private:
     bool m_enableConsolePrinting;
     bool m_useCustomTime;
 
-#if ENABLE_MULTITHREADING
     // multithreading
-    static std::mutex s_consoleMutex;   // as there is only one console for whole programm, mutex for console writing has to be static, so same for all logger instances
-    std::mutex m_fileMutex;             // as each logger writes to separate file, mutex for file writing is independent of other instances
+#if ENABLE_MULTITHREADING
+    void logging();                         // runs in separate thread; continuously writes entries of m_logEntries to file and/or console
+    bool m_loggerRunning;                   // is set to true by constructor and to false by destructor; keeps logging() function running
+
+    std::queue<LogEntry> m_logEntries;      // log-method writes into this buffer, so that the logging thread can take it on from there 
+
+    std::thread t;                          // logging thread: started in constructor, joined in destructor
+
+    std::mutex m_queueMutex;
+    static std::mutex s_consoleMutex;       // as there is only one console for whole programm, mutex for console writing has to be static, so same for all logger instances
+    // as each logger writes to separate file and only printToFile()-method does this, no mutex for file-access is needed
 #endif
 
     // calls printToConsole and printToFile
-    void makeEntry(const std::string& msg, LogLevel logLevel, std::string timeStr = "");
+    void writeToLog(const std::string& msg, LogLevel logLevel, time_t rawTime = 0, std::string timeStr = "");
 
     // adds log Level as string in front of message
     void addLogLevel(std::string& msg, LogLevel logLevel);
 
     // adds time as string in front of message
-    void addTime(std::string& msg, std::string& timeStr);
+    void addTime(std::string& msg, time_t rawTime, std::string& timeStr);
 
     // handle printing to console with time stamps etc.
     void printToConsole(std::string& msg, bool error = false);

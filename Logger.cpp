@@ -95,17 +95,30 @@ Logger::Logger(LogLevel newLogLevel, std::string logFileName, bool enableConsole
     std::string levelStr = "";
     if(!logLevelToStr(levelStr, m_logLevel)){
         std::string errMsg = "Undefined LogLevel. Logger is terminating.";
-        makeEntry(errMsg, LogLevel::Error);
+        writeToLog(errMsg, LogLevel::Error);
         return;
     }
 
     std::string initMsg = "Starting logger with log level " + levelStr;
-    makeEntry(initMsg, LogLevel::Info);
+    writeToLog(initMsg, LogLevel::Info);
+
+    #if ENABLE_MULTITHREADING
+        // start logging in separate thread
+        m_loggerRunning = true;
+        t = std::thread(&Logger::logging, this);
+        //t.detach(); // leave it running in the background
+    #endif
 }
 
 Logger::~Logger(){
+    
+    #if ENABLE_MULTITHREADING
+        m_loggerRunning = false;
+        t.join();
+    #endif
+
     std::string infoMsg = "Logger has been shut down";
-    makeEntry(infoMsg, LogLevel::Info);
+    writeToLog(infoMsg, LogLevel::Info);
 
     m_logFile << "------------------------------------------\n\n";
     m_logFile.close();
@@ -114,14 +127,44 @@ Logger::~Logger(){
     s_openLogFiles.erase(std::find(s_openLogFiles.begin(), s_openLogFiles.end(), m_logFilePath));
 }
 
+#if ENABLE_MULTITHREADING
+void Logger::logging(){
+
+    unsigned int nLogEntries = m_logEntries.size();
+
+    while(m_loggerRunning || nLogEntries > 0){  // keeps running until m_loggerRunning is set to false and after that until queue is empty
+        if(nLogEntries > 0){
+            // create new log entry from first entry in queue
+            m_queueMutex.lock();
+            LogEntry entry = m_logEntries.front();
+            m_logEntries.pop();
+            m_queueMutex.unlock();
+
+            writeToLog(entry.msg, entry.logLevel, entry.rawTime, entry.customTimeStr);
+        }
+
+        nLogEntries = m_logEntries.size();
+    }
+}
+#endif
+
 void Logger::log(const std::string &logEntry, LogLevel logLevel, std::string timeStr){
     
     if(logLevel <= m_logLevel) {
+
+        time_t rawTime = 0;
+        if(!m_useCustomTime){
+            time (&rawTime);
+        }
+
         #if ENABLE_MULTITHREADING
-            std::thread t(&Logger::makeEntry, this, logEntry, logLevel, timeStr);
-            t.detach(); // leave it running in the background
+            // create new entry in m_logEntries
+            m_queueMutex.lock();
+            m_logEntries.push({logLevel, logEntry, timeStr, rawTime});
+            m_queueMutex.unlock();
         #else
-            makeEntry(logEntry, logLevel, timeStr);
+            // write to log
+            writeToLog(logEntry, logLevel, rawTime, timeStr);
         #endif
     }
 }
@@ -135,7 +178,7 @@ void Logger::setLogLevel(LogLevel newLogLevel){
     m_logLevel = newLogLevel;
 }
 
-void Logger::makeEntry(const std::string& msg_, LogLevel logLevel, std::string timeStr){
+void Logger::writeToLog(const std::string& msg_, LogLevel logLevel, time_t rawTime, std::string timeStr){
 
     std::string msg(msg_);      // to make mutable but not change source content
 
@@ -147,7 +190,7 @@ void Logger::makeEntry(const std::string& msg_, LogLevel logLevel, std::string t
         printToConsole(msg, (logLevel == LogLevel::Error ? true : false));
     }
 
-    addTime(msg, timeStr);
+    addTime(msg, rawTime, timeStr);
     printToFile(msg);
 }
 
@@ -170,16 +213,18 @@ void Logger::addLogLevel(std::string& msg, LogLevel logLevel){
     msg = levelStr + msg;
 }
 
-void Logger::addTime(std::string& msg, std::string& timeStr){
+void Logger::addTime(std::string& msg, time_t rawTime, std::string& timeStr){
     
     if(!m_useCustomTime || timeStr == ""){
         // get current date and time as string
-        time_t rawtime;
+
+        if(rawTime == 0){
+            time(&rawTime);
+        }
+
         struct tm * timeinfo;
         char buffer[80];
-
-        time (&rawtime);
-        timeinfo = localtime(&rawtime);
+        timeinfo = localtime(&rawTime);
 
         strftime(buffer,sizeof(buffer),"%d-%m-%Y %H:%M:%S",timeinfo);
         timeStr = std::string(buffer);
@@ -207,15 +252,6 @@ void Logger::printToConsole(std::string& msg, bool error){
 
 void Logger::printToFile(std::string& msg){
 
-    #if ENABLE_MULTITHREADING
-        m_fileMutex.lock();
-    #endif
-
     // print to file
     m_logFile << msg << std::endl;
-
-    #if ENABLE_MULTITHREADING
-        m_fileMutex.unlock();
-    #endif
-
 }
