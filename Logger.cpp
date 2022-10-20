@@ -43,18 +43,61 @@ bool logLevelToStr(std::string& str, LogLevel logLevel){
     return false;
 }
 
-Logger::Logger(LogLevel newLogLevel, std::string logFileName, bool enableConsolePrinting, bool useCustomTime)
+Logger::Logger(std::string logFileName, LogLevel newLogLevel, bool enableConsolePrinting, bool useCustomTime)
     :m_logLevel(newLogLevel), m_enableConsolePrinting(enableConsolePrinting), m_useCustomTime(useCustomTime)
 {
+    m_isCSV = false;
+    setup(logFileName);
+}
+
+Logger::Logger(std::string logFileName){
+    m_isCSV = true;
+    setup(logFileName);
+}
+
+Logger::~Logger(){
+    
+    #if ENABLE_MULTITHREADING
+        m_loggerRunning = false;
+        t.join();
+    #endif
+
+    std::string infoMsg = "Logger has been shut down";
+    if(!m_isCSV){
+        
+        writeToLog(infoMsg, LogLevel::Info);
+
+        m_logFile << "------------------------------------------\n\n";
+    }
+    else{
+        printToConsole(infoMsg, false);
+    }
+
+    m_logFile.close();
+
+    // remove logfile from s_openLogFiles
+    s_openLogFiles.erase(std::find(s_openLogFiles.begin(), s_openLogFiles.end(), m_logFilePath));
+}
+
+void Logger::setup(std::string logFileName){
+
+    if(m_isCSV){
+        // CSV-will never be printed to console
+        m_enableConsolePrinting = false;
+    }
 
     // if no specific logFileName provided, use default
     if(logFileName == ""){
-        logFileName = "log0.log";
+        if(m_isCSV) logFileName = "csv0.csv";
+        else logFileName = "log0.log";
     }
 
     // if logfile has no file extension, add it
-    if(logFileName.substr(logFileName.size()-4, 4) != ".log"){
+    if(!m_isCSV && logFileName.substr(logFileName.size()-4, 4) != ".log"){
         logFileName += ".log";
+    }
+    if(m_isCSV && logFileName.substr(logFileName.size()-4, 4) != ".csv"){
+        logFileName += ".csv";
     }
 
     // check if log directory exists and create it if not
@@ -83,7 +126,8 @@ Logger::Logger(LogLevel newLogLevel, std::string logFileName, bool enableConsole
     }
 
     // (create and) open log-file
-    m_logFile.open(m_logFilePath, std::ios::out | std::ios::app);
+    if(!m_isCSV) m_logFile.open(m_logFilePath, std::ios::out | std::ios::app);
+    else m_logFile.open(m_logFilePath, std::ios::out);
 
     // check if logfile creation and opening as been successful
     if(!m_logFile.is_open()){
@@ -91,16 +135,18 @@ Logger::Logger(LogLevel newLogLevel, std::string logFileName, bool enableConsole
         printToConsole(errMsg, true);
     }
 
-    // check if passed log-level is valid (and get loglevel as string), else return
-    std::string levelStr = "";
-    if(!logLevelToStr(levelStr, m_logLevel)){
-        std::string errMsg = "Undefined LogLevel. Logger is terminating.";
-        writeToLog(errMsg, LogLevel::Error);
-        return;
-    }
+    if(!m_isCSV){
+        // check if passed log-level is valid (and get loglevel as string), else return
+        std::string levelStr = "";
+        if(!logLevelToStr(levelStr, m_logLevel)){
+            std::string errMsg = "Undefined LogLevel. Logger is terminating.";
+            writeToLog(errMsg, LogLevel::Error);
+            return;
+        }
 
-    std::string initMsg = "Starting logger with log level " + levelStr;
-    writeToLog(initMsg, LogLevel::Info);
+        std::string initMsg = "Starting logger with log level " + levelStr;
+        writeToLog(initMsg, LogLevel::Info);
+    }
 
     #if ENABLE_MULTITHREADING
         // start logging in separate thread
@@ -108,23 +154,6 @@ Logger::Logger(LogLevel newLogLevel, std::string logFileName, bool enableConsole
         t = std::thread(&Logger::logging, this);
         //t.detach(); // leave it running in the background
     #endif
-}
-
-Logger::~Logger(){
-    
-    #if ENABLE_MULTITHREADING
-        m_loggerRunning = false;
-        t.join();
-    #endif
-
-    std::string infoMsg = "Logger has been shut down";
-    writeToLog(infoMsg, LogLevel::Info);
-
-    m_logFile << "------------------------------------------\n\n";
-    m_logFile.close();
-
-    // remove logfile from s_openLogFiles
-    s_openLogFiles.erase(std::find(s_openLogFiles.begin(), s_openLogFiles.end(), m_logFilePath));
 }
 
 #if ENABLE_MULTITHREADING
@@ -149,6 +178,8 @@ void Logger::logging(){
 #endif
 
 void Logger::log(const std::string &logEntry, LogLevel logLevel, std::string timeStr){
+
+    assert(!m_isCSV);
     
     if(logLevel <= m_logLevel) {
 
@@ -174,6 +205,26 @@ void Logger::log(const char* logEntry, LogLevel logLevel, std::string timeStr){
     log(msg, logLevel, timeStr);
 }
 
+void Logger::log(const std::string &logEntry){
+
+    assert(m_isCSV);
+
+    #if ENABLE_MULTITHREADING
+        // create new entry in m_logEntries
+        m_queueMutex.lock();
+        m_logEntries.push({LogLevel::Debug, logEntry, "", 0});
+        m_queueMutex.unlock();
+    #else
+        // write to log
+        writeToLog(LogLevel::Debug, logEntry, "", 0);
+    #endif
+}
+
+void Logger::log(const char* logEntry){
+    std::string msg(logEntry);      // convert char* to std::string
+    log(msg);
+}
+
 void Logger::setLogLevel(LogLevel newLogLevel){
     m_logLevel = newLogLevel;
 }
@@ -182,15 +233,18 @@ void Logger::writeToLog(const std::string& msg_, LogLevel logLevel, time_t rawTi
 
     std::string msg(msg_);      // to make mutable but not change source content
 
-    // add logLevel as string at front
-    addLogLevel(msg, logLevel);
+    if(!m_isCSV){
+        // add logLevel as string at front
+        addLogLevel(msg, logLevel);
 
-    // make entries at different locations
-    if(m_enableConsolePrinting){
-        printToConsole(msg, (logLevel == LogLevel::Error ? true : false));
+        // make entries at different locations
+        if(m_enableConsolePrinting){
+            printToConsole(msg, (logLevel == LogLevel::Error ? true : false));
+        }
+
+        addTime(msg, rawTime, timeStr);
     }
 
-    addTime(msg, rawTime, timeStr);
     printToFile(msg);
 }
 

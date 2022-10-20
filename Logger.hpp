@@ -36,7 +36,8 @@ struct LogEntry{
 // logger class
 class Logger{
 public:
-    Logger(LogLevel newLogLevel, std::string logFileName = "", bool enableConsolePrinting=false, bool useCustomTime=false);
+    Logger(std::string logFileName, LogLevel newLogLevel, bool enableConsolePrinting=false, bool useCustomTime=false);      // for normal text logs
+    Logger(std::string logFileName);                                                                                        // for csv logs
     ~Logger();
 
     // create log entries
@@ -44,11 +45,18 @@ public:
     void log(const std::string &logEntry, LogLevel logLevel, std::string timeStr = "");
     void log(const char* logEntry, LogLevel logLevel, std::string timeStr = "");      // wrapper for above method
 
+    // create log entries for csv files
+    void log(const std::string &logEntry);
+    void log(const char* logEntry);
+
     // allows to change loglevel after logger-construction. 
     // e.g. to increase loglevel temporarely
     void setLogLevel(LogLevel newLogLevel);
 
 private:
+
+    bool m_isCSV;                             // if log should be in csv-format, only msg is printed to file (not time and log-level), console is left empty
+
     LogLevel m_logLevel;
     std::string m_logFilePath;
     std::ofstream m_logFile;
@@ -71,6 +79,9 @@ private:
     static std::mutex s_consoleMutex;       // as there is only one console for whole programm, mutex for console writing has to be static, so same for all logger instances
     // as each logger writes to separate file and only printToFile()-method does this, no mutex for file-access is needed
 #endif
+
+    // method to intialize file and thread
+    void setup(std::string logFileName);
 
     // calls printToConsole and printToFile
     void writeToLog(const std::string& msg, LogLevel logLevel, time_t rawTime = 0, std::string timeStr = "");
