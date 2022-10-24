@@ -1,20 +1,7 @@
-/*
- * @author:	Aaron Bacher
- * @date:	2022-04-11
- *
- * @brief:	TextLogger class to handle all logging
- *
- * @note:	-
- *
- */
-
 #include "TextLogger.hpp"
 
 #include <iostream>
 #include <ctime>
-
-#include <unistd.h>
-#include <boost/filesystem.hpp>
 
 bool logLevelToStr(std::string& str, LogLevel logLevel){
     switch (logLevel)

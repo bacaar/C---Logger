@@ -1,20 +1,4 @@
-/*
- * @author:	Aaron Bacher
- * @date:	2022-04-11
- *
- * @brief:	CsvLogger class to handle all logging
- *
- * @note:	-
- *
- */
-
 #include "CsvLogger.hpp"
-
-#include <iostream>
-#include <ctime>
-
-#include <unistd.h>
-#include <boost/filesystem.hpp>
 
 LogEntryCSV::LogEntryCSV(const std::string& content)
     :m_content(content)

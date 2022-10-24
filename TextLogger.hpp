@@ -1,3 +1,11 @@
+/*
+ * @author:	Aaron Bacher
+ * @date:	2022-10-24
+ *
+ * @brief:	Derived Logger class to handle text logging (normal .log-files)
+ */
+
+#pragma once
 
 #include "Logger.hpp"
 

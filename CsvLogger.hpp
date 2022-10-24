@@ -1,3 +1,12 @@
+/*
+ * @author:	Aaron Bacher
+ * @date:	2022-10-24
+ *
+ * @brief:	CsvLogger class to handle csv writing
+ */
+
+#pragma once
+
 #include "Logger.hpp"
 
 class LogEntryCSV : public LogEntry{

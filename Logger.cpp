@@ -1,17 +1,6 @@
-/*
- * @author:	Aaron Bacher
- * @date:	2022-04-11
- *
- * @brief:	Logger class to handle all logging
- *
- * @note:	-
- *
- */
-
 #include "Logger.hpp"
 
 #include <iostream>
-#include <ctime>
 
 #include <unistd.h>
 #include <boost/filesystem.hpp>

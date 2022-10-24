@@ -1,8 +1,11 @@
 /*
  * @author:	Aaron Bacher
- * @date:	2022-04-11
+ * @date:	2022-24-10
  *
- * @brief:	Logger class to handle all logging
+ * @brief:	Abstract logger class to handle all logging
+ *
+ * @note:	-
+ *
  */
 
 #pragma once
