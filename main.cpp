@@ -11,7 +11,8 @@
 #include <thread>
 #include <mutex>
 
-#include "Logger.hpp"
+#include "TextLogger.hpp"
+#include "CsvLogger.hpp"
 
 // Timer class, inspired from TheCherno (https://www.youtube.com/watch?v=YG4jexlSAjc)
 class Timer{
@@ -43,19 +44,20 @@ private:
 
 void testLoggerClass(){
 
-    Logger logger("", LogLevel::Debug);
+    TextLogger logger("", LogLevel::Debug);
     logger.log("Default logger", LogLevel::Info);
 
-    Logger customLogger("customLog.log", LogLevel::Debug, false, true);
+    TextLogger customLogger("customLog.log", LogLevel::Debug, false, true);
     customLogger.log("Custom logger", LogLevel::Info, std::to_string(3.14));
 
-    Logger csvLogger("kinState.csv");
+    CsvLogger csvLogger("kinState.csv");
     csvLogger.log("t,s,v,a");
 
     Timer timer;    // measure time until program is ready to continue with something else (-> displayed time is not time needed for logging)
     for(int i = 0; i < 10; ++i){
         logger.log("Message " + std::to_string(i), LogLevel::Debug);
         customLogger.log("Custom logger message " + std::to_string(i), LogLevel::Debug);
+        customLogger.log("Custom logger message " + std::to_string(i), LogLevel::Debug, " ");
         customLogger.log("Custom logger message " + std::to_string(i), LogLevel::Debug, std::to_string(i/10.0));
         csvLogger.log("i,1,2,3");
     }
@@ -98,7 +100,7 @@ int main(){
     // test use of Logging class, watch timing
     testLoggerClass();
 
-    testConsolePrinting();
+    //testConsolePrinting();
 
     return 0;
 }
