@@ -29,7 +29,7 @@ private:
     void logging();                         // runs in separate thread; continuously writes entries of m_logEntries to file and/or console
     bool m_loggerRunning;                   // is set to true by constructor and to false by destructor; keeps logging() function running 
 
-    std::thread t;                          // logging thread: started in constructor, joined in destructor
+    std::thread m_thread;                   // logging thread: started in constructor, joined in destructor
 
     std::vector<std::shared_ptr<Logger>> m_handledLoggers;
 };

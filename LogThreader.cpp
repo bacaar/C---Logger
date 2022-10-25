@@ -5,12 +5,12 @@
 
 LogThreader::LogThreader(){
     m_loggerRunning = true;
-    t = std::thread(&LogThreader::logging, this);
+    m_thread = std::thread(&LogThreader::logging, this);
 }
 
 LogThreader::~LogThreader(){
     m_loggerRunning = false;
-    t.join();   // wait for logging method to finish
+    m_thread.join();   // wait for logging method to finish
     std::cout << "LogThreader has been shut down" << std::endl;
 }
 
