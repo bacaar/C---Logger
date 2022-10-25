@@ -31,4 +31,7 @@ private:
 
     // construct entry, give command to write to console and/or file
     void print(std::unique_ptr<LogEntry> entry, bool enforceConsoleWriting=false) override;
+
+    // amount of columns; gets set on first entry according to amount of semicolons
+    int m_nColumns = 0;
 };
