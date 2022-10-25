@@ -1,15 +1,12 @@
 /*
- * main.cpp
+ * example.cpp
  *
- * just testing of Logger class
+ * testing logger class
+ * showing how to use
  */
 
 #include <iostream>
 #include <chrono>
-#include <fstream>
-
-#include <thread>
-#include <mutex>
 
 #include "TextLogger.hpp"
 #include "CsvLogger.hpp"
@@ -28,6 +25,7 @@ public:
         m_startTimePoint = std::chrono::high_resolution_clock::now();
     }
 
+    // stop timing, return duration
     int stop(){
         auto endTimePoint = std::chrono::high_resolution_clock::now();
 
@@ -46,15 +44,22 @@ private:
 
 void testLoggerClass(){
 
+    /* instantiate 3 different loggers */
+
+    // one with default settings
     std::shared_ptr<TextLogger> logger = std::make_shared<TextLogger>("", LogLevel::Debug);
     logger->log("Default logger", LogLevel::Info);
 
+    // one with custom time usage
     std::shared_ptr<TextLogger> customLogger = std::make_shared<TextLogger>("customLog.log", LogLevel::Debug, false, true);
     customLogger->log("Custom logger", LogLevel::Info, std::to_string(3.14));
 
+    // one csv logger
     std::shared_ptr<CsvLogger> csvLogger = std::make_shared<CsvLogger>("kinState.csv");
     csvLogger->log("t,s,v,a");
 
+    /* TESTING */
+    // test all three loggers simultaneously
     Timer timer;    // measure time until program is ready to continue with something else (-> displayed time is not time needed for logging)
     for(int i = 0; i < 10; ++i){
         logger->log("Message " + std::to_string(i), LogLevel::Debug);
@@ -66,6 +71,7 @@ void testLoggerClass(){
     
     int t1 = timer.stop();
 
+    // test all three loggers simultaneously again, now with multithreading
     LogThreader threader;
     threader.addLogger(logger);
     threader.addLogger(customLogger);
@@ -82,46 +88,15 @@ void testLoggerClass(){
     
     int t2 = timer.stop();
 
+    // compare duration
     std::cout << "without separate thread: " << t1 << " us" << std::endl;
     std::cout << "with separate thread: " << t2 << " us" << std::endl;
 }
 
-// function to test wheter it makes a difference printing a long text piece-wise or at once
-void testConsolePrinting(){
-    
-    std::string word = "HalloWelt\n";
-    int amount = 1000;
-
-    // Test 1: combine string first and print it at once
-    Timer timer;
-    std::string text = "";
-    for(int i = 0; i < amount; ++i){
-        text += word;
-    }
-    std::cout << text;
-    int t1 = timer.stop();
-    std::cout << std::endl;
-
-    // Test 2: print text piece-wise
-    timer.start();
-    for(int i = 0; i < amount; ++i){
-        std::cout << text;
-    }
-    int t2 = timer.stop();
-
-    std::cout << "Duration 1: " << t1 << " us\n";
-    std::cout << "Duration 2: " << t2 << " us\n";
-}
-
 int main(){
 
-    unsigned int n = std::thread::hardware_concurrency();
-    std::cout << n << " concurrent threads are supported.\n";
-
-    // test use of Logging class, watch timing
+    // test use of Logging class, check timing
     testLoggerClass();
-
-    //testConsolePrinting();
 
     return 0;
 }
