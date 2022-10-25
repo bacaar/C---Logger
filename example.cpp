@@ -70,7 +70,9 @@ void testLoggerClass(){
     }
     
     int t1 = timer.stop();
+    std::cout << "without separate thread: " << t1 << " us" << std::endl;
 
+    #if ENABLE_MULTITHREADING
     // test all three loggers simultaneously again, now with multithreading
     LogThreader threader;
     threader.addLogger(logger);
@@ -87,10 +89,8 @@ void testLoggerClass(){
     }
     
     int t2 = timer.stop();
-
-    // compare duration
-    std::cout << "without separate thread: " << t1 << " us" << std::endl;
     std::cout << "with separate thread: " << t2 << " us" << std::endl;
+    #endif
 }
 
 int main(){

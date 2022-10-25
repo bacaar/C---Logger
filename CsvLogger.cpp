@@ -36,10 +36,12 @@ void CsvLogger::log(const std::string &logEntry){
 
     std::unique_ptr<LogEntryCSV> entry = std::make_unique<LogEntryCSV>(logEntry);
     if(isHandledByThreader()){
+        #if ENABLE_MULTITHREADING
         // write to queue
         m_queueMutex.lock();
         m_logEntries.push(move(entry));
         m_queueMutex.unlock();
+        #endif
     } else {
         // write to log
         print(move(entry));

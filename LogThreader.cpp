@@ -1,8 +1,7 @@
 #include "LogThreader.hpp"
 
+#if ENABLE_MULTITHREADING
 #include <iostream>
-
-#include "Logger.hpp"
 
 LogThreader::LogThreader(){
     m_loggerRunning = true;
@@ -44,3 +43,4 @@ void LogThreader::addLogger(std::shared_ptr<Logger> logger){
     m_handledLoggers.push_back(logger);
     logger->m_isHandledByThreader = true;
 }
+#endif

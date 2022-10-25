@@ -5,6 +5,11 @@
 #include <unistd.h>
 #include <boost/filesystem.hpp>
 
+#if ENABLE_MULTITHREADING
+#include <thread>
+#include <chrono>
+#endif
+
 // declare static member variables once
 std::vector<std::string> Logger::s_openLogFiles;
 
@@ -65,6 +70,7 @@ void Logger::setup(std::string logFileName){
     }
 }
 
+#if ENABLE_MULTITHREADING
 std::unique_ptr<LogEntry> Logger::getQueueItem(){
 
     std::unique_ptr<LogEntry> entry;
@@ -81,8 +87,6 @@ std::unique_ptr<LogEntry> Logger::getQueueItem(){
     return move(entry);
 }
 
-#include <thread>
-#include <chrono>
 int Logger::getQueueSize(){
     int size;
 
@@ -96,6 +100,7 @@ int Logger::getQueueSize(){
     
     return size;
 }
+#endif
 
 void Logger::printToConsole(const std::string& msg){
 

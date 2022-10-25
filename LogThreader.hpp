@@ -10,11 +10,12 @@
 #include <vector>
 #include <memory>
 
+#include "Logger.hpp"   // no forward declaration as we need ENABLE_MULTITHREADING
+
+#if ENABLE_MULTITHREADING
 // multithreading
 #include <thread>
 #include <mutex>
-
-class Logger;
 
 class LogThreader {
 public:
@@ -32,3 +33,4 @@ private:
 
     std::vector<std::shared_ptr<Logger>> m_handledLoggers;
 };
+#endif

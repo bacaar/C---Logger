@@ -136,10 +136,12 @@ void TextLogger::log(const std::string &logEntry, LogLevel logLevel, std::string
         std::unique_ptr<LogEntryText> entry = std::make_unique<LogEntryText>(logLevel, logEntry, timeStr, rawTime);
 
         if(isHandledByThreader()){
+            #if ENABLE_MULTITHREADING
             // write to queue
             m_queueMutex.lock();
             m_logEntries.push(move(entry));
             m_queueMutex.unlock();
+            #endif
         } else {
             // write to log
             print(move(entry));

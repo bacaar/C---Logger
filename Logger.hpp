@@ -16,7 +16,11 @@
 #include <queue>
 #include <memory>
 
+#define ENABLE_MULTITHREADING 1
+
+#if ENABLE_MULTITHREADING
 #include <mutex>
+#endif
 
 class LogEntry{
 public:
@@ -32,16 +36,9 @@ public:
     Logger(std::string logFileName, bool enableConsolePrinting=false);      // for normal text logs
     ~Logger();
 
-    std::unique_ptr<LogEntry> getQueueItem();   // removes first item in queue and passes it to caller (e.g. LogThreader) (returns nullptr if queue empty)
-    int getQueueSize();
-
     bool isHandledByThreader() { return m_isHandledByThreader; }
 
 protected:
-    
-    std::mutex m_queueMutex;        // controls queue access
-
-    std::queue<std::unique_ptr<LogEntry>> m_logEntries;      // if handled by LogThreader, log-method writes into this buffer instead of writing directly to file and/or console
 
     bool m_enableConsolePrinting;
 
@@ -66,7 +63,21 @@ private:
     // construct entry, give command to write to console and/or file
     virtual void print(std::unique_ptr<LogEntry> entry, bool enforceConsoleWriting=false) = 0;
 
+
+#if ENABLE_MULTITHREADING
+public:
+    std::unique_ptr<LogEntry> getQueueItem();   // removes first item in queue and passes it to caller (e.g. LogThreader) (returns nullptr if queue empty)
+    int getQueueSize();
+
+protected:
+    std::mutex m_queueMutex;        // controls queue access
+
+    std::queue<std::unique_ptr<LogEntry>> m_logEntries;      // if handled by LogThreader, log-method writes into this buffer instead of writing directly to file and/or console
+
+private:
     // LogThreader needs to access print function
     friend class LogThreader;
+
+#endif
 
 };
