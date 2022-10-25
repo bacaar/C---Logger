@@ -6,23 +6,13 @@
 #include <boost/filesystem.hpp>
 
 // declare static member variables once
-#if ENABLE_MULTITHREADING
-    std::mutex Logger::s_consoleMutex;
-#endif
 std::vector<std::string> Logger::s_openLogFiles;
 
 Logger::Logger(std::string logFileName, bool enableConsolePrinting)
-    :m_enableConsolePrinting(enableConsolePrinting)
-{
-
-}
+    :m_enableConsolePrinting(enableConsolePrinting), m_isHandledByThreader(false)
+{}
 
 Logger::~Logger(){
-    
-    #if ENABLE_MULTITHREADING
-        m_loggerRunning = false;
-        t.join();
-    #endif
 
     m_logFile.close();
 
@@ -75,19 +65,43 @@ void Logger::setup(std::string logFileName){
     }
 }
 
-void Logger::printToConsole(const std::string& msg){
+std::unique_ptr<LogEntry> Logger::getQueueItem(){
 
-    #if ENABLE_MULTITHREADING
-        s_consoleMutex.lock();
-    #endif
+    std::unique_ptr<LogEntry> entry;
+
+    m_queueMutex.lock();
+    if(m_logEntries.size() == 0){
+        return std::unique_ptr<LogEntry>(nullptr);
+    }
+    else{
+        entry = move(m_logEntries.front());
+        m_logEntries.pop();
+    }
+    m_queueMutex.unlock();
+    return move(entry);
+}
+
+#include <thread>
+#include <chrono>
+int Logger::getQueueSize(){
+    int size;
+
+    // needed for stability, else it often pauses on exception during runtime (and for a try-catch block I would need a exception transport system between the threads 
+    // with which I don't want to be bothered right now)
+    std::this_thread::sleep_for(std::chrono::nanoseconds(1));
+
+    m_queueMutex.lock();
+    size =  m_logEntries.size();
+    m_queueMutex.unlock();
+    
+    return size;
+}
+
+void Logger::printToConsole(const std::string& msg){
 
     // note: I used to differentiate between error messages (then printed with cerr <<) and non-error messages (printed with cout <<)
     // but as this might affect printing order (which was initially the objective of differentiating), I removed it
     std::cout << msg << std::endl;
-
-    #if ENABLE_MULTITHREADING
-        s_consoleMutex.unlock();
-    #endif
 }
 
 void Logger::printToFile(const std::string& msg){

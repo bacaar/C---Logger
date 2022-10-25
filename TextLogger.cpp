@@ -116,19 +116,12 @@ TextLogger::TextLogger(std::string logFileName, LogLevel newLogLevel, bool enabl
 }
 
 TextLogger::~TextLogger(){
-    
-    #if ENABLE_MULTITHREADING
-        m_loggerRunning = false;
-        t.join();
-    #endif
 
     std::string infoMsg = "TextLogger has been shut down";
     
     std::unique_ptr<LogEntryText> entry = std::make_unique<LogEntryText>(LogLevel::Info, infoMsg, "", 0);
     print(move(entry), true);
     m_logFile << "------------------------------------------\n\n";
-
-    // m_logFile is closed in Base class
 }
 
 void TextLogger::log(const std::string &logEntry, LogLevel logLevel, std::string timeStr){
@@ -142,15 +135,15 @@ void TextLogger::log(const std::string &logEntry, LogLevel logLevel, std::string
 
         std::unique_ptr<LogEntryText> entry = std::make_unique<LogEntryText>(logLevel, logEntry, timeStr, rawTime);
 
-        #if ENABLE_MULTITHREADING
-            // create new entry in m_logEntries
+        if(isHandledByThreader()){
+            // write to queue
             m_queueMutex.lock();
-            m_logEntries.push({logLevel, logEntry, timeStr, rawTime});
+            m_logEntries.push(move(entry));
             m_queueMutex.unlock();
-        #else
+        } else {
             // write to log
             print(move(entry));
-        #endif
+        }
     }
 }
 

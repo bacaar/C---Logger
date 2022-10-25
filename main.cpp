@@ -14,6 +14,8 @@
 #include "TextLogger.hpp"
 #include "CsvLogger.hpp"
 
+#include "LogThreader.hpp"
+
 // Timer class, inspired from TheCherno (https://www.youtube.com/watch?v=YG4jexlSAjc)
 class Timer{
 public:
@@ -44,25 +46,44 @@ private:
 
 void testLoggerClass(){
 
-    TextLogger logger("", LogLevel::Debug);
-    logger.log("Default logger", LogLevel::Info);
+    std::shared_ptr<TextLogger> logger = std::make_shared<TextLogger>("", LogLevel::Debug);
+    logger->log("Default logger", LogLevel::Info);
 
-    TextLogger customLogger("customLog.log", LogLevel::Debug, false, true);
-    customLogger.log("Custom logger", LogLevel::Info, std::to_string(3.14));
+    std::shared_ptr<TextLogger> customLogger = std::make_shared<TextLogger>("customLog.log", LogLevel::Debug, false, true);
+    customLogger->log("Custom logger", LogLevel::Info, std::to_string(3.14));
 
-    CsvLogger csvLogger("kinState.csv");
-    csvLogger.log("t,s,v,a");
+    std::shared_ptr<CsvLogger> csvLogger = std::make_shared<CsvLogger>("kinState.csv");
+    csvLogger->log("t,s,v,a");
 
     Timer timer;    // measure time until program is ready to continue with something else (-> displayed time is not time needed for logging)
     for(int i = 0; i < 10; ++i){
-        logger.log("Message " + std::to_string(i), LogLevel::Debug);
-        customLogger.log("Custom logger message " + std::to_string(i), LogLevel::Debug);
-        customLogger.log("Custom logger message " + std::to_string(i), LogLevel::Debug, " ");
-        customLogger.log("Custom logger message " + std::to_string(i), LogLevel::Debug, std::to_string(i/10.0));
-        csvLogger.log("i,1,2,3");
+        logger->log("Message " + std::to_string(i), LogLevel::Debug);
+        customLogger->log("Custom logger message " + std::to_string(i), LogLevel::Debug);
+        customLogger->log("Custom logger message " + std::to_string(i), LogLevel::Debug, " ");
+        customLogger->log("Custom logger message " + std::to_string(i), LogLevel::Debug, std::to_string(i/10.0));
+        csvLogger->log("i,1,2,3");
     }
     
-    timer.stop();
+    int t1 = timer.stop();
+
+    LogThreader threader;
+    threader.addLogger(logger);
+    threader.addLogger(customLogger);
+    threader.addLogger(csvLogger);
+
+    timer.start();
+    for(int i = 10; i < 20; ++i){
+        logger->log("Message " + std::to_string(i), LogLevel::Debug);
+        customLogger->log("Custom logger message " + std::to_string(i), LogLevel::Debug);
+        customLogger->log("Custom logger message " + std::to_string(i), LogLevel::Debug, " ");
+        customLogger->log("Custom logger message " + std::to_string(i), LogLevel::Debug, std::to_string(i/10.0));
+        csvLogger->log("i,1,2,3");
+    }
+    
+    int t2 = timer.stop();
+
+    std::cout << "without separate thread: " << t1 << " us" << std::endl;
+    std::cout << "with separate thread: " << t2 << " us" << std::endl;
 }
 
 // function to test wheter it makes a difference printing a long text piece-wise or at once

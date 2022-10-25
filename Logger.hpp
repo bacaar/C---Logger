@@ -1,6 +1,6 @@
 /*
  * @author:	Aaron Bacher
- * @date:	2022-24-10
+ * @date:	2022-10-24
  *
  * @brief:	Abstract logger class to handle all logging
  *
@@ -16,6 +16,8 @@
 #include <queue>
 #include <memory>
 
+#include <mutex>
+
 class LogEntry{
 public:
     virtual void constructEntry() = 0;
@@ -30,8 +32,14 @@ public:
     Logger(std::string logFileName, bool enableConsolePrinting=false);      // for normal text logs
     ~Logger();
 
+    std::unique_ptr<LogEntry> getQueueItem();   // removes first item in queue and passes it to caller (e.g. LogThreader) (returns nullptr if queue empty)
+    int getQueueSize();
+
+    bool isHandledByThreader() { return m_isHandledByThreader; }
+
 protected:
-    bool m_isHandledByThread;       // defines if logger should work on its own (false) or if logging is done by LogThreader in separate thread (true)
+    
+    std::mutex m_queueMutex;        // controls queue access
 
     std::queue<std::unique_ptr<LogEntry>> m_logEntries;      // if handled by LogThreader, log-method writes into this buffer instead of writing directly to file and/or console
 
@@ -51,8 +59,14 @@ protected:
 
 private:
 
+    bool m_isHandledByThreader;       // defines if logger should work on its own (false) or if logging is done by LogThreader in separate thread (true)
+
     static std::vector<std::string> s_openLogFiles; // holds paths to all currently open log files in order to make sure that not two loggers are writing to same one
 
+    // construct entry, give command to write to console and/or file
     virtual void print(std::unique_ptr<LogEntry> entry, bool enforceConsoleWriting=false) = 0;
+
+    // LogThreader needs to access print function
+    friend class LogThreader;
 
 };

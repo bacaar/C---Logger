@@ -25,31 +25,25 @@ CsvLogger::CsvLogger(std::string logFileName)
 }
 
 CsvLogger::~CsvLogger(){
-    
-    #if ENABLE_MULTITHREADING
-        m_loggerRunning = false;
-        t.join();
-    #endif
 
     std::string infoMsg = "CsvLogger has been shut down";
     printToConsole(infoMsg);
 
-    // m_logFile is closed in Base class
 }
 
 
 void CsvLogger::log(const std::string &logEntry){
 
     std::unique_ptr<LogEntryCSV> entry = std::make_unique<LogEntryCSV>(logEntry);
-    #if ENABLE_MULTITHREADING
-        // create new entry in m_logEntries
+    if(isHandledByThreader()){
+        // write to queue
         m_queueMutex.lock();
         m_logEntries.push(move(entry));
         m_queueMutex.unlock();
-    #else
+    } else {
         // write to log
         print(move(entry));
-    #endif
+    }
 }
 
 void CsvLogger::log(const char* logEntry){
@@ -61,7 +55,9 @@ void CsvLogger::print(std::unique_ptr<LogEntry> entry, bool enforceConsoleWritin
 
     entry->constructEntry();
     std::string msg = entry->getEntry();
+
     if(enforceConsoleWriting) printToConsole(msg);
+
     printToFile(msg);
 }
 

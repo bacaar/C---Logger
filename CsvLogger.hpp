@@ -29,6 +29,6 @@ public:
 
 private:
 
-    // calls printToConsole and printToFile
+    // construct entry, give command to write to console and/or file
     void print(std::unique_ptr<LogEntry> entry, bool enforceConsoleWriting=false) override;
 };
