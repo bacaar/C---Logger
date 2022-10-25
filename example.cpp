@@ -8,10 +8,7 @@
 #include <iostream>
 #include <chrono>
 
-#include "TextLogger.hpp"
-#include "CsvLogger.hpp"
-
-#include "LogThreader.hpp"
+#include "Logger.hpp"
 
 // Timer class, inspired from TheCherno (https://www.youtube.com/watch?v=YG4jexlSAjc)
 class Timer{
