@@ -5,6 +5,8 @@
  * @brief:	Class to handle multiple log-files in single thread
  */
 
+#pragma once
+
 #include <vector>
 #include <memory>
 
