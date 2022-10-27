@@ -48,7 +48,7 @@ void testLoggerClass(){
     logger->log("Default logger", LogLevel::Info);
 
     // one with custom time usage
-    std::shared_ptr<TextLogger> customLogger = std::make_shared<TextLogger>("customLog.log", LogLevel::Debug, false, true);
+    std::shared_ptr<TextLogger> customLogger = std::make_shared<TextLogger>("/media/aaron/Volume/repos/Cpp-Logger/log/customLog.log", LogLevel::Debug, true, false, true);
     customLogger->log("Custom logger", LogLevel::Info, std::to_string(3.14));
 
     // one csv logger
