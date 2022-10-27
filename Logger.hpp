@@ -29,6 +29,10 @@
 #include <mutex>
 #include <thread>
 #include <chrono>
+
+// used by everybody (each class) which prints to console
+// can (should) be used also outside this header file
+std::mutex consoleMutex;
 #endif
 
 class LogEntry{
@@ -106,6 +110,10 @@ protected:
             std::string errMsg = "-----------\nERROR: Could not open log-file!\n-----------";
             printToConsole(errMsg);
         }
+        else{
+            std::string infoMsg = "Logging to file " + m_logFilePath;
+            printToConsole(infoMsg);
+        }
     }
 
     // handle printing to console with time stamps etc.
@@ -113,7 +121,13 @@ protected:
 
         // note: I used to differentiate between error messages (then printed with cerr <<) and non-error messages (printed with cout <<)
         // but as this might affect printing order (which was initially the objective of differentiating), I removed it
+        #if ENABLE_MULTITHREADING
+        consoleMutex.lock();
+        #endif
         std::cout << msg << std::endl;
+        #if ENABLE_MULTITHREADING
+        consoleMutex.unlock();
+        #endif
     }
 
     // prints entry to logfile
@@ -490,13 +504,18 @@ class LogThreader {
 public:
     LogThreader(){
         m_loggerRunning = true;
+        consoleMutex.lock();
+        std::cout << "LogThreader INFO: starting threader from thread id " << std::this_thread::get_id() << std::endl;
+        consoleMutex.unlock();
         m_thread = std::thread(&LogThreader::logging, this);
     }
 
     ~LogThreader(){
         m_loggerRunning = false;
         m_thread.join();   // wait for logging method to finish
+        consoleMutex.lock();
         std::cout << "LogThreader has been shut down" << std::endl;
+        consoleMutex.unlock();
     }
 
     // add new logger to be handled
@@ -508,6 +527,10 @@ public:
 private:
     // runs in separate thread; continuously writes entries of m_logEntries to file and/or console
     void logging(){
+
+        consoleMutex.lock();
+        std::cout << "LogThreader INFO: logging on thread id " << std::this_thread::get_id() << std::endl;
+        consoleMutex.unlock();
 
         while(true){
             bool canExit = !m_loggerRunning;    // if logger is still running, no chance for exit
