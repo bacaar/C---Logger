@@ -37,9 +37,20 @@ std::mutex consoleMutex;
 
 class LogEntry{
 public:
-    virtual void constructEntry() = 0;
+
+    LogEntry(const std::string& entry)
+        :m_entry(entry)
+    {}
+
+    virtual void constructEntry() {
+        // nothing to do here, just for derived classes to implement something
+    }
+
     std::string getEntry() { return m_entry; }
 protected:
+
+    LogEntry(){}    // default constructor can only be called by derived classes
+
     std::string m_entry;
 };
 
@@ -399,22 +410,6 @@ private:
     }
 };
 
-
-/* Derived Logger class to represend log-entries in normal text log */
-class LogEntryCSV : public LogEntry{
-public:
-    LogEntryCSV(const std::string& content)
-        :m_content(content)
-    {}
-
-    void constructEntry() override{
-        m_entry = m_content;
-    }
-
-private:
-    std::string m_content;
-};
-
 /* Derived Logger class to handle text logging (normal .log-files) */
 class CsvLogger : public Logger{
 public:
@@ -443,7 +438,7 @@ public:
     // write entries to m_logEntries
     void log(const std::string &logEntry){
 
-        std::unique_ptr<LogEntryCSV> entry = std::make_unique<LogEntryCSV>(logEntry);
+        std::unique_ptr<LogEntry> entry = std::make_unique<LogEntry>(logEntry);
         if(isHandledByThreader()){
             #if ENABLE_MULTITHREADING
             // write to queue
