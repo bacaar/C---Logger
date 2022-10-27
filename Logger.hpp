@@ -509,7 +509,7 @@ public:
         m_loggerRunning = false;
         m_thread.join();   // wait for logging method to finish
         consoleMutex.lock();
-        std::cout << "LogThreader has been shut down" << std::endl;
+        std::cout << "LogThreader INFO: threader has been shut down" << std::endl;
         consoleMutex.unlock();
     }
 
@@ -517,6 +517,17 @@ public:
     void addLogger(std::shared_ptr<Logger> logger){
         m_handledLoggers.push_back(logger);
         logger->m_isHandledByThreader = true;
+
+        std::string msgString = "Logger is now handled by LogThreader in separate thread";
+        
+        // if csv file write to console only
+        if(logger->m_logFilePath.substr(logger->m_logFilePath.size()-4, 4) == ".csv"){
+            logger->printToConsole(msgString);
+        }
+        if(logger->m_logFilePath.substr(logger->m_logFilePath.size()-4, 4) == ".log"){
+            std::unique_ptr<LogEntryText> msg = std::make_unique<LogEntryText>(LogLevel::Info, msgString);
+            logger->print(move(msg));
+        }
     }
 
 private:
