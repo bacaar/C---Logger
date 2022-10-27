@@ -57,7 +57,7 @@ protected:
 // logger class
 class Logger{
 public:
-    Logger(std::string logFileName, bool enableConsolePrinting=false)
+    Logger(bool enableConsolePrinting=false)
         :m_enableConsolePrinting(enableConsolePrinting), m_isHandledByThreader(false)
     {}
 
@@ -78,29 +78,46 @@ protected:
     std::ofstream m_logFile;
 
     // method to intialize file
-    void setup(std::string logFileName){
+    void setup(std::string logFileName, bool logFileNameIsAbsolutePath){
 
-        // check if log directory exists and create it if not
-        char cwd[256];
-        getcwd(cwd, 256);
-
+        std::string logFileDir;
+        std::string dirSeparator;
+        
         #ifdef __linux__
-            std::string logFileDir = std::string(cwd) + "/log";
-            m_logFilePath = logFileDir + std::string("/") + logFileName;
+        dirSeparator = std::string("/");
         #elif _WIN32
-            std::string logFileDir = std::string(cwd) + "\\log";
-            m_logFilePath = logFileDir + std::string("\\") + logFileName;
+        dirSeparator = std::string("\\");
         #endif
+
+        if(!logFileNameIsAbsolutePath){
+            // compose logFile path
+            char cwd[256];
+            getcwd(cwd, 256);
+
+            logFileDir = std::string(cwd) + dirSeparator + "log";
+            m_logFilePath = logFileDir + dirSeparator + logFileName;
+        }
+        else{
+            m_logFilePath = logFileName;
+            std::size_t found = logFileName.rfind(dirSeparator);
+            if(found != std::string::npos){
+                logFileDir = logFileName.substr(0, found);
+            }
+            else{
+                logFileDir = dirSeparator;
+            }
+        }
 
         // check that no other logger is already writing to that file
         if (std::find(s_openLogFiles.begin(), s_openLogFiles.end(), m_logFilePath) != s_openLogFiles.end()){
-            std::string errMsg = "-----------\nERROR: log-file already in use by other Logger!\n-----------";
+            std::string errMsg = "-----------\nERROR: log-file (" + m_logFilePath + ") already in use by other Logger!\n-----------";
             printToConsole(errMsg);
         }
         else{
             s_openLogFiles.push_back(m_logFilePath);
         }
 
+        // check if log directory exists and create it if not
         if (!boost::filesystem::exists(logFileDir)) {
             boost::filesystem::create_directory(logFileDir);
         }
@@ -118,7 +135,7 @@ protected:
 
         // check if logfile creation and opening as been successful
         if(!m_logFile.is_open()){
-            std::string errMsg = "-----------\nERROR: Could not open log-file!\n-----------";
+            std::string errMsg = "-----------\nERROR: Could not open log-file! " + m_logFilePath + "\n-----------";
             printToConsole(errMsg);
         }
         else{
@@ -312,8 +329,8 @@ private:
 /* Derived Logger class to handle text logging (normal .log-files) */
 class TextLogger : public Logger{
 public:
-    TextLogger(std::string logFileName, LogLevel newLogLevel, bool enableConsolePrinting=false, bool useCustomTime=false)      // for normal text logs
-        :Logger(logFileName, enableConsolePrinting), m_logLevel(newLogLevel), m_useCustomTime(useCustomTime)
+    TextLogger(std::string logFileName, LogLevel newLogLevel, bool logFileNameIsAbsolutePath=false, bool enableConsolePrinting=false, bool useCustomTime=false)      // for normal text logs
+        :Logger(enableConsolePrinting), m_logLevel(newLogLevel), m_useCustomTime(useCustomTime)
     {
         // if no specific logFileName provided, use default
         if(logFileName == ""){
@@ -325,7 +342,7 @@ public:
             logFileName += ".log";
         }
 
-        setup(logFileName);
+        setup(logFileName, logFileNameIsAbsolutePath);
 
         // check if passed log-level is valid (and get loglevel as string), else return
         std::string levelStr = "";
@@ -413,7 +430,8 @@ private:
 /* Derived Logger class to handle text logging (normal .log-files) */
 class CsvLogger : public Logger{
 public:
-    CsvLogger(std::string logFileName):Logger(logFileName, false){
+    CsvLogger(std::string logFileName, bool logFileNameIsAbsolutePath=false)
+        :Logger(false){
         // if no specific logFileName provided, use default
         if(logFileName == ""){
             logFileName = "csv0.csv";
@@ -424,7 +442,7 @@ public:
             logFileName += ".csv";
         }
 
-        setup(logFileName);
+        setup(logFileName, logFileNameIsAbsolutePath);
     }
 
     ~CsvLogger(){
