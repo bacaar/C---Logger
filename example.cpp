@@ -8,9 +8,13 @@
 #include <iostream>
 #include <chrono>
 
+#include <filesystem>
+
 #include "Logger.hpp"
 
-// Timer class, inspired from TheCherno (https://www.youtube.com/watch?v=YG4jexlSAjc)
+namespace fs = std::filesystem;
+
+// Timer class, inspired by TheCherno (https://www.youtube.com/watch?v=YG4jexlSAjc)
 class Timer{
 public:
     Timer(){
@@ -48,7 +52,7 @@ void testLoggerClass(){
     logger->log("Default logger", LogLevel::Info);
 
     // one with custom time usage
-    std::shared_ptr<TextLogger> customLogger = std::make_shared<TextLogger>("/media/aaron/Volume/repos/Cpp-Logger/log/customLog.log", LogLevel::Debug, true, false, true);
+    std::shared_ptr<TextLogger> customLogger = std::make_shared<TextLogger>(fs::current_path().string() + "/log/customLog.log", LogLevel::Debug, true, false, true);
     customLogger->log("Custom logger", LogLevel::Info, std::to_string(3.14));
 
     // one csv logger
