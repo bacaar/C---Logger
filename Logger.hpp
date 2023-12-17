@@ -21,7 +21,7 @@
 #include <iostream>
 
 #include <unistd.h>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #define ENABLE_MULTITHREADING 1
 
@@ -34,6 +34,8 @@
 // can (should) be used also outside this header file
 std::mutex consoleMutex;
 #endif
+
+namespace fs = std::filesystem;
 
 class LogEntry{
 public:
@@ -118,8 +120,8 @@ protected:
         }
 
         // check if log directory exists and create it if not
-        if (!boost::filesystem::exists(logFileDir)) {
-            boost::filesystem::create_directory(logFileDir);
+        if(!fs::exists(logFileDir)){
+            fs::create_directory(logFileDir);
         }
 
         if(m_logFilePath.substr(m_logFilePath.size()-4, 4) == ".log"){          // append mode
