@@ -9,8 +9,12 @@
  *
  */
 
-#pragma once
+//#pragma once
+#ifndef LOGGER_HPP
+#define LOGGER_HPP
 
+
+#include <algorithm>
 #include <string>
 #include <fstream>
 #include <vector>
@@ -32,7 +36,7 @@
 
 // used by everybody (each class) which prints to console
 // can (should) be used also outside this header file
-std::mutex consoleMutex;
+inline std::mutex consoleMutex;
 #endif
 
 namespace fs = std::filesystem;
@@ -588,3 +592,5 @@ private:
     std::vector<std::shared_ptr<Logger>> m_handledLoggers;
 };
 #endif
+
+#endif // LOGGER_HPP
